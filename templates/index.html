@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Assistant IA</title>
+    <!-- Lien vers Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Lien vers Font Awesome pour les icônes -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .banner {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .chat-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .user-message {
+            background-color: #e3f2fd;
+            text-align: right;
+        }
+
+        .ai-message {
+            background-color: #f5f5f5;
+            text-align: left;
+        }
+
+        .dark-mode {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        .dark-mode .chat-container {
+            border-color: #333;
+        }
+
+        .dark-mode .user-message {
+            background-color: #1e88e5;
+        }
+
+        .dark-mode .ai-message {
+            background-color: #333;
+        }
+
+        .toggle-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .toggle-switch i {
+            font-size: 1.5rem;
+            margin-left: 5px;
+        }
+
+        .file-upload {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .file-upload label {
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        .copy-button i {
+            color: #007bff;
+        }
+
+        .copy-button i.fa-check {
+            color: green;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="toggle-switch" onclick="toggleDarkMode()">
+        <i id="toggle-icon" class="fas fa-sun"></i>
+        <span id="counter" style="margin-left: 10px; font-size: 1em;">0</span>
+    </div>
+    <div class="banner">
+        <img src="static/Internationaler_Eisenbahnverband_logo.svg.png" alt="Logo uic"
+            style="width: 25%; height: auto; display: block; margin: 0 auto;">
+    </div>
+    <div class="container">
+        <div class="chat-container">
+            <h1 class="text-center">Mon Assistant IA</h1>
+            <p class="text-center">En quoi puis-je vous aider aujourd'hui ?</p>
+            <div id="chat-history" class="mb-3"></div>
+            <div class="file-upload">
+                <label for="file-input" style="border: none; padding: 0;">
+                    <i class="fas fa-paperclip"></i>
+                </label>
+                <input type="file" id="file-input" class="d-none" onchange="displayFileIcons()" multiple>
+                <div id="file-icons" style="display: inline-block; margin-left: 10px;"></div>
+            </div>
+            <div class="input-group mb-3">
+                <input type="text" id="user-input" class="form-control" placeholder="Posez votre question...">
+                <div class="input-group-append">
+                    <button class="btn btn-primary" onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lien vers jQuery et Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let toggleCount = 0;
+
+        function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const fileInput = document.getElementById('file-input');
+            const message = userInput.value;
+            const file = fileInput.files[0];
+
+            if (!message && !file) return;
+
+            // Afficher le message de l'utilisateur
+            if (message) addMessage(message, 'user');
+            userInput.value = '';
+
+            // Préparer les données à envoyer
+            const formData = new FormData();
+            formData.append('message', message);
+            if (file) {
+                formData.append('file', file);
+                addMessage(`Fichier envoyé: ${file.name}`, 'user');
+            }
+
+            // Envoyer la requête au serveur
+            fetch('/chat', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    addMessage(data.response, 'ai');
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    addMessage('Désolé, une erreur est survenue.', 'ai');
+                });
+        }
+
+        function addMessage(message, sender) {
+            const chatHistory = document.getElementById('chat-history');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.style.position = 'relative';
+            messageDiv.style.paddingRight = '30px';
+
+            const messageContent = document.createElement('span');
+            messageContent.textContent = message;
+
+            if (sender === 'ai') {
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-button';
+                copyButton.innerHTML = '<i class="fas fa-copy"></i>';
+                copyButton.onclick = () => copyToClipboard(message, copyButton);
+
+                messageDiv.appendChild(copyButton);
+            }
+
+            messageDiv.appendChild(messageContent);
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                button.innerHTML = '<i class="fas fa-check" style="color: green;"></i>';
+                setTimeout(() => {
+                    button.innerHTML = '<i class="fas fa-copy"></i>';
+                }, 2000);
+            }).catch(err => {
+                console.error('Erreur lors de la copie : ', err);
+            });
+        }
+
+        // Permettre l'envoi avec la touche Entrée
+        document.getElementById('user-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Fonction pour basculer entre le mode clair et sombre
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('toggle-icon');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+
+            // Incrémenter le compteur
+            toggleCount++;
+            document.getElementById('counter').textContent = toggleCount;
+        }
+
+        // Fonction pour afficher l'icône du fichier sélectionné
+        function displayFileIcons() {
+            const fileInput = document.getElementById('file-input');
+            const fileIcons = document.getElementById('file-icons');
+            fileIcons.innerHTML = ''; // Clear previous icons
+
+            Array.from(fileInput.files).forEach((file, index) => {
+                const extension = file.name.split('.').pop().toLowerCase();
+                let iconClass = 'fa-file';
+
+                switch (extension) {
+                    case 'pdf':
+                        iconClass = 'fa-file-pdf';
+                        break;
+                    case 'doc':
+                    case 'docx':
+                        iconClass = 'fa-file-word';
+                        break;
+                    case 'xls':
+                    case 'xlsx':
+                        iconClass = 'fa-file-excel';
+                        break;
+                    case 'ppt':
+                    case 'pptx':
+                        iconClass = 'fa-file-powerpoint';
+                        break;
+                    case 'jpg':
+                    case 'jpeg':
+                    case 'png':
+                    case 'gif':
+                        iconClass = 'fa-file-image';
+                        break;
+                    case 'txt':
+                        iconClass = 'fa-file-alt';
+                        break;
+                    default:
+                        iconClass = 'fa-file';
+                }
+
+                const iconContainer = document.createElement('div');
+                iconContainer.style.position = 'relative';
+                iconContainer.style.display = 'inline-block';
+                iconContainer.style.marginRight = '5px';
+                iconContainer.style.textAlign = 'center';
+
+                const iconElement = document.createElement('i');
+                iconElement.className = `fas ${iconClass}`;
+                iconElement.style.fontSize = '2.25em';
+
+                const removeButton = document.createElement('button');
+                removeButton.style.position = 'absolute';
+                removeButton.style.top = '-5px';
+                removeButton.style.left = '-5px';
+                removeButton.style.border = 'none';
+                removeButton.style.background = 'none';
+                removeButton.style.color = 'red';
+                removeButton.style.cursor = 'pointer';
+                removeButton.innerHTML = '<i class="fas fa-times-circle"></i>';
+                removeButton.onclick = () => removeFile(index);
+
+                const extensionText = document.createElement('span');
+                extensionText.textContent = extension.toUpperCase();
+                extensionText.style.display = 'block';
+                extensionText.style.fontSize = '0.75em';
+                extensionText.style.marginTop = '5px';
+
+                iconContainer.appendChild(iconElement);
+                iconContainer.appendChild(removeButton);
+                iconContainer.appendChild(extensionText);
+                fileIcons.appendChild(iconContainer);
+            });
+        }
+
+        function removeFile(index) {
+            const fileInput = document.getElementById('file-input');
+            const dataTransfer = new DataTransfer();
+
+            Array.from(fileInput.files).forEach((file, i) => {
+                if (i !== index) {
+                    dataTransfer.items.add(file);
+                }
+            });
+
+            fileInput.files = dataTransfer.files;
+            displayFileIcons();
+        }
+    </script>
+</body>
+
+</html>
